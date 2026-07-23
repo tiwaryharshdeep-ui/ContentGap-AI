@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Calendar & Multi-Dimensional Audit Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0b132b;
+      --bg-sidebar: #1c2541;
+      --bg-card: #1c2541;
+      --bg-card-hover: #263359;
+      --bg-input: #0b132b;
+      --border-color: #3a506b;
+      --border-glow: #48cae4;
+      --accent-cyan: #48cae4;
+      --accent-indigo: #5bc0be;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-purple: #9d4edd;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-main: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #e2e8f0;
+      --bg-input: #f8fafc;
+      --border-color: #cbd5e1;
+      --border-glow: #0284c7;
+      --accent-cyan: #0284c7;
+      --accent-indigo: #0d9488;
+      --accent-emerald: #059669;
+      --accent-amber: #d97706;
+      --accent-rose: #e11d48;
+      --accent-purple: #7c3aed;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Left Sidebar Navigation */
+    aside.sidebar {
+      width: 280px;
+      min-width: 280px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      padding: 1.5rem 1rem;
+      z-index: 100;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      text-decoration: none;
+      padding: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .brand-logo {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.35rem; color: #ffffff;
+      box-shadow: 0 4px 15px rgba(72, 202, 228, 0.3);
+    }
+    .brand-title { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+    .brand-subtitle { font-size: 0.76rem; color: var(--text-muted); font-weight: 400; }
+
+    /* Single-Use Email Access Box in Sidebar */
+    .email-gate-box {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.85rem;
+      margin-bottom: 1rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .email-gate-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .email-gate-input {
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .email-gate-input:focus { border-color: var(--accent-cyan); }
+
+    /* Theme Toggle Button */
+    .theme-toggle-btn {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-bottom: 1.25rem;
+      transition: all 0.3s ease;
+    }
+    .theme-toggle-btn:hover {
+      border-color: var(--accent-cyan);
+      background-color: var(--bg-card-hover);
+    }
+
+    /* Sidebar Navigation Links */
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font-main);
+      font-weight: 600;
+      font-size: 0.92rem;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-align: left;
+    }
+
+    .nav-btn:hover {
+      color: var(--text-main);
+      background-color: var(--bg-card-hover);
+    }
+
+    .nav-btn.active {
+      background-color: var(--bg-card-hover);
+      color: var(--accent-cyan);
+      border-color: var(--border-glow);
+      box-shadow: 0 4px 12px rgba(72, 202, 228, 0.15);
+    }
+
+    .sidebar-footer {
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background-color: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--accent-emerald);
+      padding: 0.5rem 0.85rem;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      background-color: var(--accent-emerald);
+      border-radius: 50%;
+    }
+
+    /* Main Content Container */
+    main.main-content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+      min-width: 0;
+    }
+
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* Solid Card Styling */
+    .solid-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.85rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    /* Quota Exceeded Red Alert Banner */
+    .quota-alert-box {
+      display: none;
+      background-color: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.5);
+      color: var(--accent-rose);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .quota-alert-title { font-weight: 800; font-size: 1.1rem; color: var(--accent-rose); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+    .quota-alert-desc { font-size: 0.92rem; line-height: 1.5; color: var(--text-main); }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .hero-title {
+      font-size: 2.6rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    .hero-desc {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+
+    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    /* Buttons */
+    .btn {
+      background: linear-gradient(135deg, var(--border-color), var(--accent-cyan));
+      color: #ffffff; border: none; border-radius: 10px;
+      padding: 0.85rem 1.6rem; font-weight: 700; font-size: 0.95rem;
+      cursor: pointer; transition: transform 0.15s, background-color 0.2s;
+      display: inline-flex; align-items: center; gap: 0.55rem;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-2px); opacity: 0.95; }
+
+    .btn-secondary {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover { background-color: var(--bg-card-hover); transform: none; }
+
+    .btn-emerald { background: var(--accent-emerald); color: #ffffff; }
+    .btn-emerald:hover { opacity: 0.9; }
+
+    .btn-purple { background: var(--accent-purple); color: #ffffff; }
+    .btn-purple:hover { opacity: 0.9; }
+
+    /* Grid Layouts */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+
+    .card-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 1.25rem;
+      background-color: var(--bg-main); color: var(--accent-cyan);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main); }
+    .card-text { color: var(--text-muted); font-size: 0.92rem; line-height: 1.55; }
+
+    /* Form Input Controls */
+    .input-group { display: flex; gap: 1rem; margin-top: 1rem; }
+    .input-field {
+      flex: 1; background-color: var(--bg-input);
+      border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 0.95rem 1.35rem; color: var(--text-main); font-size: 1rem;
+      outline: none; transition: border-color 0.2s, background-color 0.3s ease;
+    }
+    .input-field:focus { border-color: var(--accent-cyan); }
+
+    textarea.input-field { min-height: 100px; resize: vertical; font-family: var(--font-main); }
+
+    /* Audit Metric Cards */
+    .audit-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px; padding: 1.25rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .audit-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; }
+    .audit-count {
+      background-color: var(--bg-main); color: var(--accent-cyan);
+      padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+      border: 1px solid var(--border-color);
+    }
+
+    .card-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .card-item {
+      background-color: var(--bg-main); border-radius: 8px; padding: 0.85rem 1rem;
+      border-left: 4px solid var(--accent-cyan); font-size: 0.88rem;
+      transition: background-color 0.3s ease;
+    }
+    .card-item.outdated { border-left-color: var(--accent-amber); }
+    .card-item.seasonal { border-left-color: var(--accent-rose); }
+    .card-item.faq { border-left-color: var(--accent-emerald); }
+
+    .item-title { font-weight: 600; margin-bottom: 0.25rem; color: var(--text-main); }
+    .item-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* Table Styles */
+    .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; background-color: var(--bg-card); }
+    th {
+      background-color: var(--bg-main); padding: 1rem 1.25rem;
+      font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+      font-size: 0.75rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+    td { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    tr:hover { background-color: var(--bg-card-hover); }
+
+    .badge {
+      display: inline-block; padding: 0.25rem 0.65rem; border-radius: 6px;
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    }
+    .badge-high { background-color: rgba(244, 63, 94, 0.2); color: var(--accent-rose); border: 1px solid rgba(244, 63, 94, 0.4); }
+    .badge-medium { background-color: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-low { background-color: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-intent { background-color: rgba(91, 192, 190, 0.2); color: var(--accent-cyan); border: 1px solid rgba(91, 192, 190, 0.4); }
+
+    .loader {
+      display: none; text-align: center; padding: 2rem;
+      color: var(--accent-cyan); font-weight: 600; font-size: 1.05rem;
+      background-color: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color);
+      margin-bottom: 2rem;
+    }
+
+    /* Export Center Cards */
+    .export-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.6rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    /* Code Box */
+    .code-box {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      overflow-x: auto;
+      max-height: 350px;
+      overflow-y: auto;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar Navigation -->
+  <aside class="sidebar">
+    <div>
+      <a href="#" class="brand" onclick="switchNav('home')">
+        <div class="brand-logo">C</div>
+        <div>
+          <div class="brand-title">Content Engine</div>
+          <div class="brand-subtitle">Audit & Calendar Suite</div>
+        </div>
+      </a>
+
+      <!-- Single-Use Email Gate Box -->
+      <div class="email-gate-box">
+        <div class="email-gate-label">
+          <span>📧 Access Email (Single-Use Quota)</span>
+        </div>
+        <input type="email" id="user-email-input" class="email-gate-input" placeholder="user@example.com" onchange="saveEmail(this.value)">
+      </div>
+
+      <!-- Theme Toggle Button -->
+      <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">☀️</span> <span id="theme-text">Light Mode</span>
+      </button>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" id="nav-home" onclick="switchNav('home')">
+          <span>🏠</span> Home Overview
+        </button>
+        <button class="nav-btn" id="nav-audit" onclick="switchNav('audit')">
+          <span>🔍</span> Website Audit
+        </button>
+        <button class="nav-btn" id="nav-plan" onclick="switchNav('plan')">
+          <span>🗓️</span> 30-90 Days Plan
+        </button>
+        <button class="nav-btn" id="nav-custom" onclick="switchNav('custom')">
+          <span>💡</span> Custom Post Ideas
+        </button>
+        <button class="nav-btn" id="nav-export" onclick="switchNav('export')">
+          <span>📊</span> Export Center
+        </button>
+        <button class="nav-btn" id="nav-about" onclick="switchNav('about')">
+          <span>ℹ️</span> Engine Specs
+        </button>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Rate Limit Enforced</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Quota Exceeded Warning Box -->
+    <div class="quota-alert-box" id="quota-alert">
+      <div class="quota-alert-title">
+        <span>🚫 Quota Exceeded / Duplicate Extraction Blocked</span>
+      </div>
+      <div class="quota-alert-desc" id="quota-alert-text">
+        Is email address se data nikaalne ki limit khatam ho chuki hai. Usi email se dubara aane par data extraction access blocked hai.
+      </div>
+    </div>
+
+    <!-- Loader Component -->
+    <div class="loader" id="loader">
+      ⏳ Executing Multi-Dimensional Content Engine Analysis...
+    </div>
+
+    <!-- ================= PAGE 1: HOME ================= -->
+    <section id="page-home" class="page-section active">
+      <div class="solid-card">
+        <div class="hero-grid">
+          <div>
+            <h1 class="hero-title">Multi-Dimensional Website Audit & Content Calendar</h1>
+            <p class="hero-desc">
+              Crawl website domains, extract topic gaps, analyze seasonal travel demand, auto-schedule balanced content calendars, and generate 2000-word SEO articles with rate-limited email access.
+            </p>
+            <div class="hero-actions">
+              <button class="btn" onclick="switchNav('audit')">🔍 Run Website Audit</button>
+              <button class="btn btn-purple" onclick="switchNav('plan')">🗓️ 30-90 Days Plan</button>
+              <button class="btn btn-secondary" onclick="switchNav('export')">📊 Open Export Hub</button>
+            </div>
+          </div>
+          <div style="background-color: #0b132b; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem;">
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-cyan); font-weight: 700; margin-bottom: 0.75rem;">
+              🔒 Limited Source Email Access Policy
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: var(--text-muted);">
+              Har email ID ko ek hi baar data extract karne ka limited source access milta hai. Agar same email se dubara try karenge, toh extraction access system dwara block kar diya jata hai.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="solid-card" style="margin-bottom: 0;">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">Website Audit</div>
+          <div class="card-text">Scrapes existing site architecture, checks stale content, identifies missing FAQ opportunities, and generates strategic content recommendations.</div>
+        </div>
+
+        <div class="solid-card" style="margin-bottom: 0;">
+          <div class="card-icon">🗓️</div>
+          <div class="card-title">Timeframe Horizons</div>
+          <div class="card-text">Builds 30, 60, or 90-day publishing roadmaps with 2 posts/week cadence, balanced keyword priorities, and target audience alignment.</div>
+        </div>
+
+        <div class="solid-card" style="margin-bottom: 0;">
+          <div class="card-icon">🔒</div>
+          <div class="card-title">Single-Use Rate Limiter</div>
+          <div class="card-text">Enforces single-use data extraction policy per email to prevent unauthorized automated data harvesting.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 2: WEBSITE AUDIT ================= -->
+    <section id="page-audit" class="page-section">
+      <div class="solid-card">
+        <div class="card-title">Website Domain Audit</div>
+        <p class="card-text">Enter your target website URL below to run an automated crawl, audit content gaps, outdated posts, seasonal trends, and generate a 10-field content calendar.</p>
+        
+        <div class="input-group">
+          <input type="text" id="domain-url" class="input-field" placeholder="Enter website domain URL (e.g., https://exampletrekking.com)">
+          <button class="btn" onclick="runDomainAudit()">🔍 Run Audit & Calendar</button>
+        </div>
+        <div style="margin-top: 0.75rem; font-size: 0.82rem; color: var(--text-muted);">
+          Popular Examples: <a href="#" style="color: var(--accent-cyan);" onclick="document.getElementById('domain-url').value='https://exampletrekking.com'; runDomainAudit(); return false;">exampletrekking.com</a> | <a href="#" style="color: var(--accent-cyan);" onclick="document.getElementById('domain-url').value='https://himalayanexpeditions.org'; runDomainAudit(); return false;">himalayanexpeditions.org</a>
+        </div>
+      </div>
+
+      <div class="grid-4" id="audit-grid">
+        <div class="audit-card">
+          <div class="audit-card-header">
+            <span style="font-weight: 700; font-size: 1rem;">Content Gaps</span>
+            <span class="audit-count" id="count-gaps">0</span>
+          </div>
+          <ul class="card-list" id="list-gaps"><li class="card-item">Run audit to see missing topic gaps</li></ul>
+        </div>
+
+        <div class="audit-card">
+          <div class="audit-card-header">
+            <span style="font-weight: 700; font-size: 1rem;">Outdated Blogs</span>
+            <span class="audit-count" id="count-outdated">0</span>
+          </div>
+          <ul class="card-list" id="list-outdated"><li class="card-item outdated">Run audit to check stale posts</li></ul>
+        </div>
+
+        <div class="audit-card">
+          <div class="audit-card-header">
+            <span style="font-weight: 700; font-size: 1rem;">Seasonal Treks</span>
+            <span class="audit-count" id="count-seasonal">0</span>
+          </div>
+          <ul class="card-list" id="list-seasonal"><li class="card-item seasonal">Run audit to discover seasonal trends</li></ul>
+        </div>
+
+        <div class="audit-card">
+          <div class="audit-card-header">
+            <span style="font-weight: 700; font-size: 1rem;">FAQ Opportunities</span>
+            <span class="audit-count" id="count-faq">0</span>
+          </div>
+          <ul class="card-list" id="list-faq"><li class="card-item faq">Run audit to extract target FAQs</li></ul>
+        </div>
+      </div>
+
+      <div class="solid-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1.25rem; font-weight: 700;">Audit Content Calendar</h3>
+          <button class="btn btn-secondary" onclick="switchNav('export')">📊 Export Options</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Publish Date</th>
+                <th>Blog Title</th>
+                <th>Primary Keyword</th>
+                <th>Secondary Keywords</th>
+                <th>Search Intent</th>
+                <th>Target Audience</th>
+                <th>Content Type</th>
+                <th>Link</th>
+                <th>CTA</th>
+                <th>Priority</th>
+                <th>2000-Word Blog</th>
+              </tr>
+            </thead>
+            <tbody id="calendar-body-audit">
+              <tr>
+                <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                  No website audit executed yet. Enter a domain URL above to populate your content calendar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 3: 30-90 DAYS PLAN ================= -->
+    <section id="page-plan" class="page-section">
+      <div class="solid-card">
+        <div class="card-title">🗓️ 30-90 Days Content Horizon Plan</div>
+        <p class="card-text">Select your target publishing horizon to auto-generate a structured publishing schedule (2 posts/week cadence).</p>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button class="btn" style="background: linear-gradient(135deg, #3a506b, #48cae4);" onclick="runTimeframePlan(30)">⚡ 30-Day Horizon (8 Posts)</button>
+          <button class="btn" style="background: linear-gradient(135deg, #2a3a60, #5bc0be);" onclick="runTimeframePlan(60)">📅 60-Day Horizon (16 Posts)</button>
+          <button class="btn btn-purple" onclick="runTimeframePlan(90)">🚀 90-Day Horizon (24 Posts)</button>
+        </div>
+      </div>
+
+      <div class="solid-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <h3 style="font-size: 1.25rem; font-weight: 700;">Scheduled Content Plan</h3>
+          <button class="btn btn-emerald" onclick="exportData('excel')">📊 Export Plan (.xlsx)</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Publish Date</th>
+                <th>Blog Title</th>
+                <th>Primary Keyword</th>
+                <th>Secondary Keywords</th>
+                <th>Search Intent</th>
+                <th>Target Audience</th>
+                <th>Content Type</th>
+                <th>Link</th>
+                <th>CTA</th>
+                <th>Priority</th>
+                <th>2000-Word Blog</th>
+              </tr>
+            </thead>
+            <tbody id="calendar-body-plan">
+              <tr>
+                <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                  Click one of the horizon buttons above (30, 60, or 90 days) to generate your content roadmap.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 4: CUSTOM POST IDEAS ================= -->
+    <section id="page-custom" class="page-section">
+      <div class="solid-card">
+        <div class="card-title">💡 Custom Post Ideas Generator</div>
+        <p class="card-text">Have specific blog ideas or titles in mind? Enter them below to enrich each post with the full 10-field metadata schema.</p>
+        
+        <div style="margin-top: 1.25rem;">
+          <textarea id="custom-titles" class="input-field" placeholder="Enter comma-separated blog titles (e.g., Kedarkantha Winter Trek Guide, Top 10 High Altitude Trekking Boots, Hampta Pass Monsoon Packing List)"></textarea>
+          <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Separate multiple post titles with commas</div>
+            <button class="btn btn-purple" onclick="runCustomPosts()">✨ Enrich Custom Calendar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="solid-card">
+        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.25rem;">Enriched Custom Calendar</h3>
+        
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Publish Date</th>
+                <th>Blog Title</th>
+                <th>Primary Keyword</th>
+                <th>Secondary Keywords</th>
+                <th>Search Intent</th>
+                <th>Target Audience</th>
+                <th>Content Type</th>
+                <th>Link</th>
+                <th>CTA</th>
+                <th>Priority</th>
+                <th>2000-Word Blog</th>
+              </tr>
+            </thead>
+            <tbody id="calendar-body-custom">
+              <tr>
+                <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                  Enter custom post titles above to generate your enriched 10-field calendar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 5: EXPORT CENTER ================= -->
+    <section id="page-export" class="page-section">
+      <div class="solid-card">
+        <div class="card-title">📊 Export Center</div>
+        <p class="card-text">Export your generated content calendar into industry-standard formats for reporting and collaboration.</p>
+      </div>
+
+      <div class="grid-4">
+        <div class="export-card">
+          <div>
+            <div style="font-size: 2rem; margin-bottom: 0.75rem;">📊</div>
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">Excel Workbook (.xlsx)</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Multi-tab workbook containing Calendar, Audit Summary, Gaps, Outdated Posts & FAQs.</p>
+          </div>
+          <button class="btn btn-emerald" onclick="exportData('excel')">Download .xlsx</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <div style="font-size: 2rem; margin-bottom: 0.75rem;">📄</div>
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">CSV Spreadsheet (.csv)</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Universal comma-separated file ready for importing into Notion, Airtable, or Excel.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="exportData('csv')">Download .csv</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <div style="font-size: 2rem; margin-bottom: 0.75rem;">⚡</div>
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">JSON Data Stream (.json)</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Full structured JSON payload containing 10-field metadata objects for API integration.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="exportData('json')">Download .json</button>
+        </div>
+
+        <div class="export-card">
+          <div>
+            <div style="font-size: 2rem; margin-bottom: 0.75rem;">🟢</div>
+            <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">Google Sheets Payload</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Structured Google Sheets API 2D array payload compatible with Google Sheets MCP Server.</p>
+          </div>
+          <button class="btn btn-secondary" onclick="exportData('gsheets')">Download Payload</button>
+        </div>
+      </div>
+
+      <div class="solid-card">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.85rem;">Live API Export Payload Schema Preview</h3>
+        <div class="code-box" id="export-json-preview">
+{
+  "status": "success",
+  "totalCalendarRows": 8,
+  "fields": [
+    "publishDate", "blogTitle", "primaryKeyword", "secondaryKeywords",
+    "searchIntent", "targetAudience", "contentType", "linkToBlog", "cta", "priority"
+  ],
+  "formatSupport": ["xlsx", "csv", "json", "gsheets"]
+}
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PAGE 6: ABOUT ENGINE ================= -->
+    <section id="page-about" class="page-section">
+      <div class="solid-card">
+        <div class="card-title">ℹ️ Technical Specifications</div>
+        <p class="card-text" style="margin-bottom: 1.5rem;">
+          Engine built using TypeScript, Node.js, Express, Cheerio, Zod, and ExcelJS.
+        </p>
+
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.75rem;">REST Endpoints</h3>
+        <div class="code-box" style="margin-bottom: 1.5rem;">
+POST /api/audit/domain             -> Run domain crawl & audit analysis
+POST /api/calendar/generate-timeframe -> Generate 30/60/90 day content plan
+POST /api/calendar/generate-from-posts-> Enrich custom post title list
+GET  /api/calendar/export           -> Export calendar (xlsx, csv, json, gsheets)
+POST /api/blog/generate             -> Generate 2000-word SEO blog article & image
+GET  /api/blog/export-markdown      -> Export generated blog as .md file
+GET  /health                        -> System health check endpoint
+        </div>
+
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.75rem;">10-Field Metadata Schema Requirements</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Field #</th>
+                <th>Field Name</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>Publish Date</td><td>ISO Date</td><td>Recommended scheduled publish date</td></tr>
+              <tr><td>2</td><td>Blog Title</td><td>String</td><td>Optimized H1 blog title</td></tr>
+              <tr><td>3</td><td>Primary Keyword</td><td>String</td><td>High-volume target primary keyword</td></tr>
+              <tr><td>4</td><td>Secondary Keywords</td><td>Array</td><td>List of supporting LSI secondary keywords</td></tr>
+              <tr><td>5</td><td>Search Intent</td><td>Enum</td><td>Informational, Commercial, Navigational, Transactional</td></tr>
+              <tr><td>6</td><td>Target Audience</td><td>String</td><td>Demographic persona (e.g. Beginners, Solo Trekkers)</td></tr>
+              <tr><td>7</td><td>Content Type</td><td>String</td><td>Guide, Listicle, Review, FAQ, Comparison</td></tr>
+              <tr><td>8</td><td>Link to Blog</td><td>URL</td><td>Full canonical target URL slug</td></tr>
+              <tr><td>9</td><td>CTA</td><td>String</td><td>Conversion call-to-action prompt</td></tr>
+              <tr><td>10</td><td>Priority</td><td>Enum</td><td>High, Medium, Low priority level</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Blog Viewer Modal -->
+  <div id="blog-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0, 0, 0, 0.75); z-index:9999; overflow-y:auto; padding:2rem; backdrop-filter: blur(4px);">
+    <div style="max-width:920px; margin:0 auto; background-color: var(--bg-card); border:1px solid var(--border-color); border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+      <div id="blog-hero" style="width:100%; height:320px; background-size:cover; background-position:center; position:relative; display:flex; align-items:flex-end; padding:2rem; background-image:linear-gradient(to top, var(--bg-card), transparent);">
+        <div>
+          <span style="background-color:var(--bg-main); color:var(--accent-cyan); border:1px solid var(--border-color); padding:0.35rem 0.85rem; border-radius:20px; font-size:0.8rem; font-weight:700;" id="blog-badge">2000-Word Article</span>
+          <h1 id="blog-modal-title" style="font-size:2.2rem; font-weight:800; margin-top:0.6rem; color:var(--text-main);"></h1>
+          <p id="blog-modal-meta" style="color:var(--text-muted); font-size:0.9rem; margin-top:0.4rem;"></p>
+        </div>
+      </div>
+      <div style="padding:2.5rem; color:var(--text-main); font-size:1.05rem; line-height:1.8;" id="blog-modal-body">
+      </div>
+      <div style="padding:1.5rem 2.5rem; background-color:var(--bg-main); border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-secondary" onclick="closeBlogModal()">Close</button>
+        <button class="btn btn-emerald" onclick="downloadBlogMarkdown()">⬇️ Download Markdown (.md)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeAuditId = 'latest';
+    let activeBlogTitle = '';
+
+    // Initialize Theme and Load Saved Email on Startup
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      const saved = localStorage.getItem('userEmail');
+      if (saved) {
+        document.getElementById('user-email-input').value = saved;
+      }
+    });
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('appTheme') || 'dark';
+      setTheme(savedTheme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('appTheme', theme);
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      if (icon && text) {
+        if (theme === 'light') {
+          icon.innerText = '🌙';
+          text.innerText = 'Dark Mode';
+        } else {
+          icon.innerText = '☀️';
+          text.innerText = 'Light Mode';
+        }
+      }
+    }
+
+    function saveEmail(email) {
+      if (email) localStorage.setItem('userEmail', email.trim());
+    }
+
+    function getUserEmail() {
+      const el = document.getElementById('user-email-input');
+      const val = el ? el.value.trim() : '';
+      if (!val) {
+        alert('📧 Email Required: Please enter your email address in the sidebar before extracting data.');
+        el?.focus();
+        return null;
+      }
+      localStorage.setItem('userEmail', val);
+      return val;
+    }
+
+    function handleApiError(res, data) {
+      if (res.status === 429 || (data && data.error === 'Quota Exceeded')) {
+        const alertEl = document.getElementById('quota-alert');
+        const textEl = document.getElementById('quota-alert-text');
+        if (alertEl && textEl) {
+          textEl.innerText = data.message || 'Is email address se data nikaalne ki limit khatam ho chuki hai. Usi email se dubara aane par data extraction access blocked hai.';
+          alertEl.style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        alert('🚫 Access Blocked: ' + (data.message || 'Quota exceeded for this email address.'));
+        return true;
+      }
+      return false;
+    }
+
+    function switchNav(pageId) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+
+      const navBtn = document.getElementById(`nav-${pageId}`);
+      const pageSec = document.getElementById(`page-${pageId}`);
+
+      if (navBtn) navBtn.classList.add('active');
+      if (pageSec) pageSec.classList.add('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function runDomainAudit() {
+      const email = getUserEmail();
+      if (!email) return;
+
+      const url = document.getElementById('domain-url').value.trim() || 'https://exampletrekking.com';
+      showLoader(true);
+      try {
+        const res = await fetch('/api/audit/domain', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-email': email
+          },
+          body: JSON.stringify({ domainUrl: url, userEmail: email })
+        });
+        const data = await res.json();
+        if (handleApiError(res, data)) return;
+        if (!res.ok) throw new Error(data.message || data.error);
+        
+        activeAuditId = data.auditId;
+        renderReport(data);
+      } catch (e) {
+        alert('Error executing audit: ' + e.message);
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    async function runTimeframePlan(days) {
+      const email = getUserEmail();
+      if (!email) return;
+
+      showLoader(true);
+      try {
+        const res = await fetch('/api/calendar/generate-timeframe', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-email': email
+          },
+          body: JSON.stringify({ timeframeDays: days, postsPerWeek: 2, userEmail: email })
+        });
+        const data = await res.json();
+        if (handleApiError(res, data)) return;
+        if (!res.ok) throw new Error(data.message || data.error);
+
+        activeAuditId = data.auditId;
+        renderCalendarTable(data.calendar, 'calendar-body-plan');
+        updateExportPreview(data.calendar);
+      } catch (e) {
+        alert('Error generating timeframe plan: ' + e.message);
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    async function runCustomPosts() {
+      const email = getUserEmail();
+      if (!email) return;
+
+      const raw = document.getElementById('custom-titles').value.trim();
+      const titles = raw ? raw.split(',').map(t => ({ title: t.trim() })) : [
+        { title: 'Kedarkantha Winter Trek Guide' },
+        { title: 'Top 10 High Altitude Trekking Boots' }
+      ];
+      showLoader(true);
+      try {
+        const res = await fetch('/api/calendar/generate-from-posts', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-email': email
+          },
+          body: JSON.stringify({ posts: titles, userEmail: email })
+        });
+        const data = await res.json();
+        if (handleApiError(res, data)) return;
+        if (!res.ok) throw new Error(data.message || data.error);
+
+        renderCalendarTable(data.calendar, 'calendar-body-custom');
+        updateExportPreview(data.calendar);
+      } catch (e) {
+        alert('Error generating custom calendar: ' + e.message);
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    function renderReport(report) {
+      document.getElementById('count-gaps').innerText = report.contentGaps.length;
+      document.getElementById('list-gaps').innerHTML = report.contentGaps.map(g => `
+        <li class="card-item">
+          <div class="item-title">${g.suggestedTitle}</div>
+          <div class="item-sub">Keyword: ${g.primaryKeyword} • Intent: ${g.searchIntent}</div>
+        </li>
+      `).join('') || '<li class="card-item">No missing gaps found</li>';
+
+      document.getElementById('count-outdated').innerText = report.outdatedBlogs.length;
+      document.getElementById('list-outdated').innerHTML = report.outdatedBlogs.map(o => `
+        <li class="card-item outdated">
+          <div class="item-title">${o.currentTitle}</div>
+          <div class="item-sub">${o.stalenessReason}</div>
+        </li>
+      `).join('') || '<li class="card-item outdated">All posts up to date</li>';
+
+      document.getElementById('count-seasonal').innerText = report.seasonalTrips.length;
+      document.getElementById('list-seasonal').innerHTML = report.seasonalTrips.map(s => `
+        <li class="card-item seasonal">
+          <div class="item-title">${s.tripName}</div>
+          <div class="item-sub">Publish: ${s.recommendedPublishDate} (60-90 days lead time)</div>
+        </li>
+      `).join('') || '<li class="card-item seasonal">No seasonal items</li>';
+
+      document.getElementById('count-faq').innerText = report.faqOpportunities.length;
+      document.getElementById('list-faq').innerHTML = report.faqOpportunities.map(f => `
+        <li class="card-item faq">
+          <div class="item-title">${f.question}</div>
+          <div class="item-sub">Target Keyword: ${f.targetKeyword}</div>
+        </li>
+      `).join('') || '<li class="card-item faq">No FAQ items</li>';
+
+      renderCalendarTable(report.calendar, 'calendar-body-audit');
+      updateExportPreview(report.calendar);
+    }
+
+    function renderCalendarTable(calendar, targetBodyId) {
+      const tbody = document.getElementById(targetBodyId);
+      if (!tbody) return;
+
+      tbody.innerHTML = calendar.map(item => `
+        <tr>
+          <td><span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-cyan);">${item.publishDate}</span></td>
+          <td><strong>${item.blogTitle}</strong></td>
+          <td><code style="font-family: var(--font-mono); color: var(--accent-cyan);">${item.primaryKeyword}</code></td>
+          <td style="color: var(--text-muted);">${(item.secondaryKeywords || []).join(', ')}</td>
+          <td><span class="badge badge-intent">${item.searchIntent}</span></td>
+          <td>${item.targetAudience}</td>
+          <td>${item.contentType}</td>
+          <td><a href="${item.linkToBlog}" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">Link</a></td>
+          <td style="font-style: italic; color: #cbd5e1;">"${item.cta}"</td>
+          <td><span class="badge badge-${(item.priority || 'medium').toLowerCase()}">${item.priority}</span></td>
+          <td>
+            <button class="btn" style="padding: 0.4rem 0.85rem; font-size: 0.78rem; background: #3a506b; color: #fff;" onclick="generateAndShowBlog('${encodeURIComponent(item.blogTitle)}')">
+              📝 2000-Word Blog
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateExportPreview(calendar) {
+      const previewEl = document.getElementById('export-json-preview');
+      if (previewEl && calendar) {
+        previewEl.innerText = JSON.stringify({
+          status: "success",
+          auditId: activeAuditId,
+          totalCalendarRows: calendar.length,
+          sampleRow: calendar[0] || null
+        }, null, 2);
+      }
+    }
+
+    async function generateAndShowBlog(encodedTitle) {
+      const email = getUserEmail();
+      if (!email) return;
+
+      const title = decodeURIComponent(encodedTitle);
+      activeBlogTitle = title;
+      showLoader(true);
+      try {
+        const res = await fetch('/api/blog/generate', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-email': email
+          },
+          body: JSON.stringify({ title, userEmail: email })
+        });
+        const blog = await res.json();
+        if (handleApiError(res, blog)) return;
+        if (!res.ok) throw new Error(blog.message || blog.error);
+
+        document.getElementById('blog-hero').style.backgroundImage = `linear-gradient(to top, #1c2541, transparent), url('${blog.heroImageUrl}')`;
+        document.getElementById('blog-modal-title').innerText = blog.title;
+        document.getElementById('blog-modal-meta').innerText = `Keyword: ${blog.primaryKeyword} • ${blog.wordCount} words • ${blog.readTimeMinutes} min read • By ${blog.author}`;
+        document.getElementById('blog-modal-body').innerHTML = blog.contentHtml;
+        document.getElementById('blog-modal').style.display = 'block';
+      } catch (e) {
+        alert('Error generating blog: ' + e.message);
+      } finally {
+        showLoader(false);
+      }
+    }
+
+    function closeBlogModal() {
+      document.getElementById('blog-modal').style.display = 'none';
+    }
+
+    function downloadBlogMarkdown() {
+      const email = getUserEmail();
+      if (!email) return;
+
+      if (activeBlogTitle) {
+        window.open(`/api/blog/export-markdown?title=${encodeURIComponent(activeBlogTitle)}&user_email=${encodeURIComponent(email)}`, '_blank');
+      }
+    }
+
+    function exportData(format) {
+      const email = getUserEmail();
+      if (!email) return;
+
+      window.open(`/api/calendar/export?auditId=${activeAuditId}&format=${format}&user_email=${encodeURIComponent(email)}`, '_blank');
+    }
+
+    function showLoader(show) {
+      const el = document.getElementById('loader');
+      if (el) el.style.display = show ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
