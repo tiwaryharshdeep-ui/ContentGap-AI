@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: content-calendar-audit-engine
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
