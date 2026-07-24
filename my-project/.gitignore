@@ -1,9 +1,0 @@
-node_modules/
-dist/
-build/
-*.log
-.env
-.env.*
-.DS_Store
-Thumbs.db
-coverage/
