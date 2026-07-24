@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Website Content Calendar & Audit API Contract",
+  "type": "object",
+  "endpoints": {
+    "POST /api/audit/domain": {
+      "summary": "Audits a website domain or sitemap and generates an enriched 10-field content calendar",
+      "request": {
+        "type": "object",
+        "required": ["domainUrl"],
+        "properties": {
+          "domainUrl": { "type": "string", "format": "uri", "example": "https://exampletrekking.com" },
+          "maxPages": { "type": "integer", "default": 100, "maximum": 500 },
+          "includeSeasonalTrips": { "type": "boolean", "default": true }
+        }
+      },
+      "response": {
+        "200": {
+          "type": "object",
+          "required": ["auditId", "domainUrl", "totalPagesIndexed", "contentGaps", "outdatedBlogs", "seasonalTrips", "faqOpportunities", "calendar"],
+          "properties": {
+            "auditId": { "type": "string" },
+            "domainUrl": { "type": "string" },
+            "auditedAt": { "type": "string", "format": "date-time" },
+            "totalPagesIndexed": { "type": "integer" },
+            "contentGaps": { "type": "array" },
+            "outdatedBlogs": { "type": "array" },
+            "seasonalTrips": { "type": "array" },
+            "faqOpportunities": { "type": "array" },
+            "calendar": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ContentCalendarItem" }
+            }
+          }
+        }
+      }
+    },
+    "POST /api/calendar/generate-from-posts": {
+      "summary": "Enriches a raw list of post concepts or titles into a complete 10-field content calendar",
+      "request": {
+        "type": "object",
+        "required": ["posts"],
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title"],
+              "properties": {
+                "title": { "type": "string" },
+                "primaryKeyword": { "type": "string" },
+                "targetAudience": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "type": "object",
+          "required": ["calendar"],
+          "properties": {
+            "calendar": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/ContentCalendarItem" }
+            }
+          }
+        }
+      }
+    },
+    "GET /api/calendar/export": {
+      "summary": "Exports the generated content calendar and audit report in JSON, CSV, or Google Sheets payload format",
+      "request": {
+        "queryParameters": {
+          "auditId": { "type": "string", "required": true },
+          "format": { "type": "string", "enum": ["json", "csv", "gsheets"], "default": "csv" }
+        }
+      },
+      "response": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "format": { "type": "string" },
+            "downloadUrl": { "type": "string" },
+            "data": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ContentCalendarItem": {
+      "type": "object",
+      "required": [
+        "publishDate",
+        "blogTitle",
+        "primaryKeyword",
+        "secondaryKeywords",
+        "searchIntent",
+        "targetAudience",
+        "contentType",
+        "linkToBlog",
+        "cta",
+        "priority"
+      ],
+      "properties": {
+        "publishDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "blogTitle": { "type": "string" },
+        "primaryKeyword": { "type": "string" },
+        "secondaryKeywords": { "type": "array", "items": { "type": "string" } },
+        "searchIntent": { "type": "string", "enum": ["Informational", "Commercial", "Transactional", "Navigational"] },
+        "targetAudience": { "type": "string" },
+        "contentType": { "type": "string" },
+        "linkToBlog": { "type": "string" },
+        "cta": { "type": "string" },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] }
+      }
+    }
+  }
+}
