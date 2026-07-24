@@ -44,4 +44,21 @@ describe('API Key Authentication & Email Quota Middleware', () => {
 
     expect(res.status).toBe(200);
   });
+
+  it('allows export endpoint download even after email has registered data extraction', async () => {
+    const key = process.env.API_KEY || 'my_secret_api_key_2026';
+    // First request extracts data and sets quota record
+    await request(app)
+      .post('/api/calendar/generate-timeframe')
+      .set('x-api-key', key)
+      .set('x-user-email', 'registered_exporter@example.com')
+      .send({ timeframeDays: 30 });
+
+    // Second request to export Excel should succeed (200 OK) without being blocked by 429 Quota Exceeded
+    const exportRes = await request(app)
+      .get(`/api/calendar/export?auditId=latest&format=excel&api_key=${key}&user_email=registered_exporter@example.com`);
+
+    expect(exportRes.status).toBe(200);
+    expect(exportRes.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  });
 });

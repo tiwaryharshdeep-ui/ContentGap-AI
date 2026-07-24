@@ -13,6 +13,11 @@ const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const emailUsageStore = new Map<string, EmailUsageRecord>();
 
 export function emailQuotaMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Allow export/download endpoints to proceed without blocking quota
+  if (req.path.includes('/export') || req.path.includes('/export-markdown')) {
+    return next();
+  }
+
   // Extract email from headers, query params, or body
   const userEmail = 
     (req.headers['x-user-email'] as string) || 

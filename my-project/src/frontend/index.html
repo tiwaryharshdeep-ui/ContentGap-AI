@@ -1115,20 +1115,75 @@ GET  /health                        -> System health check endpoint
       document.getElementById('blog-modal').style.display = 'none';
     }
 
-    function downloadBlogMarkdown() {
+    async function downloadBlogMarkdown() {
       const email = getUserEmail();
       if (!email) return;
 
-      if (activeBlogTitle) {
-        window.open(`/api/blog/export-markdown?title=${encodeURIComponent(activeBlogTitle)}&user_email=${encodeURIComponent(email)}`, '_blank');
+      if (!activeBlogTitle) {
+        alert('Please generate a blog article first.');
+        return;
+      }
+
+      showLoader(true);
+      try {
+        const url = `/api/blog/export-markdown?title=${encodeURIComponent(activeBlogTitle)}&user_email=${encodeURIComponent(email)}`;
+        const res = await fetch(url, { headers: { 'x-user-email': email } });
+        if (!res.ok) {
+          const data = await res.json();
+          if (handleApiError(res, data)) return;
+          throw new Error(data.message || data.error || 'Failed to download markdown');
+        }
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        const filename = `${activeBlogTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-2000-word-blog.md`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (e) {
+        alert('Markdown Export Error: ' + e.message);
+      } finally {
+        showLoader(false);
       }
     }
 
-    function exportData(format) {
+    async function exportData(format) {
       const email = getUserEmail();
       if (!email) return;
 
-      window.open(`/api/calendar/export?auditId=${activeAuditId}&format=${format}&user_email=${encodeURIComponent(email)}`, '_blank');
+      showLoader(true);
+      try {
+        const url = `/api/calendar/export?auditId=${activeAuditId}&format=${format}&user_email=${encodeURIComponent(email)}`;
+        const res = await fetch(url, { headers: { 'x-user-email': email } });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          if (handleApiError(res, data)) return;
+          throw new Error(data.message || data.error || 'Export failed');
+        }
+
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        
+        let ext = format === 'excel' ? 'xlsx' : format;
+        let filename = `content-calendar.${ext}`;
+        if (format === 'gsheets') filename = 'google-sheets-payload.json';
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (e) {
+        alert('Export Error: ' + e.message);
+      } finally {
+        showLoader(false);
+      }
     }
 
     function showLoader(show) {
